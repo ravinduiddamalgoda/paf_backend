@@ -26,6 +26,11 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // OAuth related fields
+    private String provider;
+    private String providerId;
+    private boolean enabled = true;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private Set<Post> posts = new HashSet<>();
 
