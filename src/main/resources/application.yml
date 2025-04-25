@@ -1,10 +1,13 @@
+server:
+  port: 8084
+
 spring:
   application:
     name: app
 
   datasource:
-    username: sysAdmin
-    password: sysAdmin@sk
+    username: admin
+    password: admin123
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/social
 
@@ -16,6 +19,38 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
 
+  # OAuth2 Configuration
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+              client-id: ${GOOGLE_CLIENT_ID}
+              client-secret: ${GOOGLE_CLIENT_SECRET}
+              scope:
+                - email
+                - profile
+          facebook:
+            client-id: ${FACEBOOK_CLIENT_ID}
+            client-secret: ${FACEBOOK_CLIENT_SECRET}
+            scope:
+              - email
+              - public_profile
+
+  # File upload configuration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 15MB
+
+# Custom properties for file storage
+file:
+  upload-dir: ./uploads
+  allowed-image-types: image/jpeg,image/png,image/gif
+  allowed-video-types: video/mp4,video/quicktime
+  max-video-duration-seconds: 30
+
 logging:
   level:
     org:
@@ -25,3 +60,9 @@ logging:
           descriptor:
             sql:
               BasicBinder: TRACE
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration: 86400000  # 1 day in milliseconds
+
