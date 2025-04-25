@@ -7,10 +7,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtTokenProvider {
@@ -24,7 +27,24 @@ public class JwtTokenProvider {
     private int jwtExpirationMs;
 
     public String generateToken(Authentication authentication) {
-        UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+        String username;
+        Map<String, Object> claims = new HashMap<>();
+
+        // Handle both UserDetails and OAuth2User
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+            username = userPrincipal.getUsername();
+        } else if (authentication.getPrincipal() instanceof OAuth2User) {
+            OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+            username = oauth2User.getAttribute("email");
+
+            // Add additional claims from OAuth2User if needed
+            claims.put("name", oauth2User.getAttribute("name"));
+            claims.put("picture", oauth2User.getAttribute("picture"));
+            claims.put("oauth2Provider", "google");
+        } else {
+            throw new IllegalArgumentException("Unsupported principal type");
+        }
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
@@ -32,7 +52,8 @@ public class JwtTokenProvider {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
 
         return Jwts.builder()
-                .setSubject(userPrincipal.getUsername())
+                .setClaims(claims)
+                .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
                 .signWith(key)
