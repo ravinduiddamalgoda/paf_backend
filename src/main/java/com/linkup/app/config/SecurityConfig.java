@@ -44,23 +44,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors().and().csrf().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authorizeHttpRequests()
-                .requestMatchers("/api/auth/**", "/oauth2/**", "/login").permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .oauth2Login()
-                .loginPage("/login")
-                .userInfoEndpoint()
-                .userService(oAuth2UserService)
-                .and()
-                .successHandler((request, response, authentication) -> {
-                    // Redirect after successful OAuth2 login
-                    response.sendRedirect("/dashboard");
-                })
-                .failureUrl("/login?error=true");
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configure(http))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/auth/**", "/oauth2/**", "/login").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(oAuth2UserService)
+                        )
+                        .successHandler((request, response, authentication) -> {
+                            // Redirect after successful OAuth2 login
+                            response.sendRedirect("/dashboard");
+                        })
+                        .failureUrl("/login?error=true")
+                );
 
         // Add JWT filter
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
