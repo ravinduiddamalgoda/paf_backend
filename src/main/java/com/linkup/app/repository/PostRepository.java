@@ -10,4 +10,5 @@ import java.util.List;
 public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findByUserUserIdOrderByPostIdDesc(Long userId);
     List<Post> findAllByOrderByPostIdDesc();
+    void deleteByPostIdAndUserUserId(Long postId, Long userId);
 }

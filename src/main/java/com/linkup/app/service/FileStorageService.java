@@ -32,31 +32,48 @@ public class FileStorageService {
     private int maxVideoDurationSeconds;
 
     public String storeFile(MultipartFile file) throws IOException {
-        // Check if file is empty
-        if (file.isEmpty()) {
-            throw new IOException("Failed to store empty file");
+        try {
+            // Check if file is empty
+            if (file == null) {
+                throw new IOException("File is null");
+            }
+
+            if (file.isEmpty()) {
+                throw new IOException("Failed to store empty file");
+            }
+
+            // Log file details
+            System.out.println("Processing file: " + file.getOriginalFilename() +
+                    ", size: " + file.getSize() +
+                    ", content type: " + file.getContentType());
+
+            // Check file type
+            String fileType = file.getContentType();
+            if (!isAllowedFileType(fileType)) {
+                throw new IOException("File type not allowed: " + fileType);
+            }
+
+            // Generate unique filename
+            String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
+            String extension = getFileExtension(originalFilename);
+            String newFilename = UUID.randomUUID().toString() +
+                    (extension.isEmpty() ? "" : "." + extension);
+
+            // Create upload directory if it doesn't exist
+            Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+            System.out.println("Upload path: " + uploadPath);
+            Files.createDirectories(uploadPath);
+
+            // Save the file
+            Path targetLocation = uploadPath.resolve(newFilename);
+            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("File saved successfully to: " + targetLocation);
+
+            return newFilename;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new IOException("Failed to store file: " + e.getMessage(), e);
         }
-
-        // Check file type
-        String fileType = file.getContentType();
-        if (!isAllowedFileType(fileType)) {
-            throw new IOException("File type not allowed: " + fileType);
-        }
-
-        // Generate unique filename
-        String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-        String extension = getFileExtension(originalFilename);
-        String newFilename = UUID.randomUUID().toString() + "." + extension;
-
-        // Create upload directory if it doesn't exist
-        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-        Files.createDirectories(uploadPath);
-
-        // Save the file
-        Path targetLocation = uploadPath.resolve(newFilename);
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
-        return newFilename;
     }
 
     public boolean isAllowedFileType(String contentType) {
@@ -80,6 +97,7 @@ public class FileStorageService {
     }
 
     private String getFileExtension(String filename) {
-        return filename.substring(filename.lastIndexOf(".") + 1);
+        int dotIndex = filename.lastIndexOf(".");
+        return (dotIndex > 0) ? filename.substring(dotIndex + 1) : "";
     }
 }

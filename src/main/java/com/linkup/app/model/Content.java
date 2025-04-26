@@ -1,9 +1,12 @@
 package com.linkup.app.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Objects;
 
 @Entity
 @Table(name = "contents")
@@ -26,6 +29,20 @@ public class Content {
     private Integer duration;      // For videos, duration in seconds (null for images)
 
     @ManyToOne
-    @JoinColumn(name = "postId", nullable = false)
+    @JoinColumn(name = "post_id")
+    @JsonBackReference
     private Post post;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Content content = (Content) o;
+        return Objects.equals(id, content.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }

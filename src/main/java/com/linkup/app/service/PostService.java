@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,26 +28,25 @@ public class PostService {
     private FileStorageService fileStorageService;
 
     public Post createPost(Long userId, String description, List<MultipartFile> mediaFiles) throws IOException {
-        // Check user exists
-        Optional<User> userOpt = userRepository.findById(userId);
-        if (!userOpt.isPresent()) {
-            throw new RuntimeException("User not found");
-        }
+        // Validate user existence
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
-        // Validate number of files
         if (mediaFiles != null && mediaFiles.size() > 3) {
-            throw new RuntimeException("Maximum 3 files allowed per post");
+            throw new IllegalArgumentException("Maximum 3 media files are allowed per post");
         }
 
-        // Create post entity
+        // Create new Post
         Post post = new Post();
-        post.setUser(userOpt.get());
+        post.setUser(user);
         post.setPostType("skill_sharing");
         post.setDescription(description);
+        post.setContents(new HashSet<>()); // Important to match your entity Set<Content>
 
-        // Process and store media files
-        List<Content> contentList = new ArrayList<>();
+        // Save Post early to get ID (if needed for storage naming)
+        post = postRepository.save(post);
 
+        // Process media files if any
         if (mediaFiles != null && !mediaFiles.isEmpty()) {
             for (MultipartFile file : mediaFiles) {
                 String fileName = fileStorageService.storeFile(file);
@@ -56,36 +56,29 @@ public class PostService {
                 content.setContentType(file.getContentType());
                 content.setFileName(file.getOriginalFilename());
                 content.setFileSize(file.getSize());
+                content.setPost(post);
 
-                // Set file type (image or video)
+                // File type handling
                 if (fileStorageService.isImageFile(file.getContentType())) {
                     content.setFileType("image");
                 } else if (fileStorageService.isVideoFile(file.getContentType())) {
                     content.setFileType("video");
-                    // TODO: Extract video duration here if possible
-                    // For now, setting a default value
-                    content.setDuration(0);
+                    content.setDuration(0); // Placeholder for video duration
+                } else {
+                    content.setFileType("unknown");
                 }
 
-                content.setPost(post);
-                contentList.add(content);
+                post.getContents().add(content);
             }
         }
 
-        // Save post first
-        Post savedPost = postRepository.save(post);
+        // Save updated post with contents attached
+        post = postRepository.save(post);
 
-        // Then associate contents with saved post
-        if (!contentList.isEmpty()) {
-            for (Content content : contentList) {
-                content.setPost(savedPost);
-            }
-            savedPost.getContents().addAll(contentList);
-            savedPost = postRepository.save(savedPost);
-        }
-
-        return savedPost;
+        return post;
     }
+
+
 
     public List<Post> getPostsByUserId(Long userId) {
         return postRepository.findByUserUserIdOrderByPostIdDesc(userId);
@@ -98,4 +91,36 @@ public class PostService {
     public Optional<Post> getPostById(Long postId) {
         return postRepository.findById(postId);
     }
+
+    public boolean deletePost(Long postId, Long userId) {
+        Optional<Post> postOpt = postRepository.findById(postId);
+
+        if (postOpt.isPresent()) {
+            Post post = postOpt.get();
+            if (!post.getUser().getUserId().equals(userId)) {
+                throw new SecurityException("Unauthorized: You can only delete your own posts");
+            }
+            postRepository.delete(post);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public Post updatePostDescription(Long postId, Long userId, String newDescription) {
+        Optional<Post> postOpt = postRepository.findById(postId);
+
+        if (postOpt.isPresent()) {
+            Post post = postOpt.get();
+            if (!post.getUser().getUserId().equals(userId)) {
+                throw new SecurityException("Unauthorized: You can only update your own posts");
+            }
+            post.setDescription(newDescription);
+            return postRepository.save(post);
+        } else {
+            throw new RuntimeException("Post not found with ID: " + postId);
+        }
+    }
+
+
 }
