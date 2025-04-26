@@ -86,14 +86,31 @@ public class LearningPathService {
 
     @Transactional
     public void deleteLearningPath(Long pathId, Long userId) {
-        LearningPath learningPath = learningPathRepository.findById(pathId)
-                .orElseThrow(() -> new RuntimeException("Learning path not found with id: " + pathId));
+        try {
+            // Verify the learning path exists and belongs to the current user
+            LearningPath learningPath = learningPathRepository.findById(pathId)
+                    .orElseThrow(() -> new RuntimeException("Learning path not found with id: " + pathId));
 
-        if (!learningPath.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized: You can only delete your own learning paths");
+            if (!learningPath.getUser().getUserId().equals(userId)) {
+                throw new SecurityException("Unauthorized: You can only delete your own learning paths");
+            }
+
+            // Execute delete in correct order to avoid foreign key constraint issues
+            // 1. First, delete all contents using JPQL (avoid loading the entities)
+            learningPathContentRepository.deleteByLearningPathId(pathId);
+
+            // 2. Clear the collection to avoid concurrent modification
+            if (learningPath.getLearningPathContents() != null) {
+                learningPath.getLearningPathContents().clear();
+            }
+
+            // 3. Now it's safe to delete the learning path itself
+            learningPathRepository.deleteById(pathId);
+        } catch (Exception e) {
+            // Log the exception for better debugging
+            e.printStackTrace();
+            throw e;
         }
-
-        learningPathRepository.delete(learningPath);
     }
 
     @Transactional
