@@ -19,6 +19,12 @@ public class LearningPathContent {
     private Boolean isCompleted;
     private LocalDateTime date;
 
+    // Fields to better describe the content
+    private String contentTitle;
+    private String contentDescription;
+    private String contentUrl;
+    private Integer ordinal; // For ordering content in a learning path
+
     @ManyToOne
     @JoinColumn(name = "learning_path_id", nullable = false)
     private LearningPath learningPath;

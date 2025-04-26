@@ -29,4 +29,3 @@ public class LearningPath {
     @OneToMany(mappedBy = "learningPath", cascade = CascadeType.ALL)
     private Set<LearningPathContent> learningPathContents = new HashSet<>();
 }
-
