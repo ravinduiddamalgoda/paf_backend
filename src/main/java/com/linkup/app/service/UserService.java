@@ -6,12 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.stereotype.Service;
-
 
 import java.util.List;
 import java.util.Optional;
-
 
 @Service
 public class UserService {
@@ -156,26 +153,4 @@ public class UserService {
     public boolean existsByUsername(String username) {
         return userRepository.existsByUserName(username);
     }
-
-public interface UserService {
-
-    List<User> getAllUsers();
-
-    Optional<User> getUserById(Long userId);
-
-    Optional<User> getUserByEmail(String email);
-
-    Optional<User> getUserByUsername(String username);
-
-    User createUser(User user);
-
-    User updateUser(Long userId, User userDetails);
-
-    void deleteUser(Long userId);
-
-    boolean existsByEmail(String email);
-
-    boolean existsByUsername(String username);
-
-    Optional<User> findByProviderAndProviderId(String provider, String providerId);
 }

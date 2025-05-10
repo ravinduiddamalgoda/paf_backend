@@ -71,4 +71,4 @@ app:
     # After OAuth2 login, user will be redirected to this controller endpoint
     success-url: /api/auth/oauth2/callback
   frontend:
-    url: http://localhost:3000
+    url: http://localhost:5173
