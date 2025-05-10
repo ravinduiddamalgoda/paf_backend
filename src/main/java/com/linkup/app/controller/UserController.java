@@ -1,5 +1,6 @@
 package com.linkup.app.controller;
 
+import com.linkup.app.dto.UserDTO;
 import com.linkup.app.model.User;
 import com.linkup.app.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,8 +30,8 @@ public class UserController {
      * Get all users
      */
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        List<UserDTO> users = userService.getAllUsersDTO();
         return ResponseEntity.ok(users);
     }
 
@@ -38,8 +39,8 @@ public class UserController {
      * Get user by ID
      */
     @GetMapping("/{userId}")
-    public ResponseEntity<User> getUserById(@PathVariable Long userId) {
-        return userService.getUserById(userId)
+    public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
+        return userService.getUserByIdDTO(userId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -48,8 +49,8 @@ public class UserController {
      * Get user by email
      */
     @GetMapping("/by-email")
-    public ResponseEntity<User> getUserByEmail(@RequestParam String email) {
-        return userService.getUserByEmail(email)
+    public ResponseEntity<UserDTO> getUserByEmail(@RequestParam String email) {
+        return userService.getUserByEmailDTO(email)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -58,8 +59,8 @@ public class UserController {
      * Get user by username
      */
     @GetMapping("/by-username")
-    public ResponseEntity<User> getUserByUsername(@RequestParam String username) {
-        return userService.getUserByUsername(username)
+    public ResponseEntity<UserDTO> getUserByUsername(@RequestParam String username) {
+        return userService.getUserByUsernameDTO(username)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -70,7 +71,7 @@ public class UserController {
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
-            User createdUser = userService.createUser(user);
+            UserDTO createdUser = userService.createUserDTO(user);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -83,7 +84,7 @@ public class UserController {
     @PutMapping("/{userId}")
     public ResponseEntity<?> updateUser(@PathVariable Long userId, @RequestBody User userDetails) {
         try {
-            User updatedUser = userService.updateUser(userId, userDetails);
+            UserDTO updatedUser = userService.updateUserDTO(userId, userDetails);
             return ResponseEntity.ok(updatedUser);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -125,11 +126,11 @@ public class UserController {
      * Find user by OAuth provider details
      */
     @GetMapping("/oauth")
-    public ResponseEntity<User> findByProviderAndProviderId(
+    public ResponseEntity<UserDTO> findByProviderAndProviderId(
             @RequestParam String provider,
             @RequestParam String providerId) {
         return userService.findByProviderAndProviderId(provider, providerId)
-                .map(ResponseEntity::ok)
+                .map(user -> ResponseEntity.ok(userService.convertToDTO(user)))
                 .orElse(ResponseEntity.notFound().build());
     }
 }

@@ -1,5 +1,6 @@
 package com.linkup.app.service.impl;
 
+import com.linkup.app.dto.UserDTO;
 import com.linkup.app.model.User;
 import com.linkup.app.repository.UserRepository;
 import com.linkup.app.service.UserService;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -133,5 +135,54 @@ public class UserServiceImpl implements UserService {
     @Override
     public Optional<User> findByProviderAndProviderId(String provider, String providerId) {
         return userRepository.findByProviderAndProviderId(provider, providerId);
+    }
+
+    // New DTO methods implementation
+    @Override
+    public UserDTO convertToDTO(User user) {
+        if (user == null) return null;
+        return new UserDTO(
+                user.getUserId(),
+                user.getUserName(),
+                user.getEmail(),
+                user.getProvider(),
+                user.getProviderId(),
+                user.isEnabled()
+        );
+    }
+
+    @Override
+    public List<UserDTO> getAllUsersDTO() {
+        return getAllUsers().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<UserDTO> getUserByIdDTO(Long userId) {
+        return getUserById(userId)
+                .map(this::convertToDTO);
+    }
+
+    @Override
+    public Optional<UserDTO> getUserByEmailDTO(String email) {
+        return getUserByEmail(email)
+                .map(this::convertToDTO);
+    }
+
+    @Override
+    public Optional<UserDTO> getUserByUsernameDTO(String username) {
+        return getUserByUsername(username)
+                .map(this::convertToDTO);
+    }
+
+    @Override
+    public UserDTO createUserDTO(User user) {
+        return convertToDTO(createUser(user));
+    }
+
+    @Override
+    public UserDTO updateUserDTO(Long userId, User userDetails) {
+        return convertToDTO(updateUser(userId, userDetails));
     }
 }
