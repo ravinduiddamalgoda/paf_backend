@@ -2,14 +2,21 @@ package com.linkup.app.controller;
 
 import com.linkup.app.dto.UserDTO;
 import com.linkup.app.model.User;
+import com.linkup.app.repository.UserRepository;
 import com.linkup.app.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
@@ -17,6 +24,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * Simple health check endpoint
@@ -133,4 +143,42 @@ public class UserController {
                 .map(user -> ResponseEntity.ok(userService.convertToDTO(user)))
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+        }
+
+        String email;
+
+        // Extract email from principal
+        Object principal = auth.getPrincipal();
+        if (principal instanceof UserDetails userDetails) {
+            email = userDetails.getUsername();
+        } else if (principal instanceof OAuth2User oauth2User) {
+            email = oauth2User.getAttribute("email");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Unsupported authentication principal");
+        }
+
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("User not found with email: " + email);
+        }
+
+        User user = userOpt.get();
+        UserDTO userDTO = userService.convertToDTO(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("user", userDTO);
+        response.put("authenticated", true);
+
+        return ResponseEntity.ok(response);
+    }
+
+
 }
