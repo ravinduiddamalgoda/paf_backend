@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +85,21 @@ public class LearningPathController {
 
             String name = (String) requestBody.get("name");
             Integer tag = (Integer) requestBody.get("tag");
-            List<LearningPathContentDTO> contents = (List<LearningPathContentDTO>) requestBody.get("contents");
+
+            // Fix the conversion from LinkedHashMap to LearningPathContentDTO
+            List<Map<String, Object>> contentMaps = (List<Map<String, Object>>) requestBody.get("contents");
+            List<LearningPathContentDTO> contents = new ArrayList<>();
+
+            if (contentMaps != null) {
+                for (Map<String, Object> contentMap : contentMaps) {
+                    LearningPathContentDTO contentDto = new LearningPathContentDTO();
+                    contentDto.setContentTitle((String) contentMap.get("contentTitle"));
+                    contentDto.setContentDescription((String) contentMap.get("contentDescription"));
+                    contentDto.setContentUrl((String) contentMap.get("contentUrl"));
+                    contentDto.setOrdinal((Integer) contentMap.get("ordinal"));
+                    contents.add(contentDto);
+                }
+            }
 
             LearningPathDTO learningPath = learningPathService.createLearningPath(
                     user.getUserId(), name, tag, contents);
