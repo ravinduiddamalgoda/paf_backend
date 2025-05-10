@@ -1,6 +1,9 @@
 package com.linkup.app.config;
 
 import com.linkup.app.security.JwtTokenProvider;
+import com.linkup.app.security.CustomUserDetailsService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -21,12 +24,12 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-import com.linkup.app.security.CustomUserDetailsService;
-
 @Configuration
 @EnableWebSocketMessageBroker
 @Order(Ordered.HIGHEST_PRECEDENCE + 99)
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
     @Autowired
     private JwtTokenProvider tokenProvider;
@@ -34,14 +37,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
-
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")  // ✅ Use this instead
-                .withSockJS();                  // ✅ SockJS needs explicit origin patterns
+        registry
+                .addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
-
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -55,19 +57,35 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registration.interceptors(new ChannelInterceptor() {
             @Override
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
-                StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+                StompHeaderAccessor accessor =
+                        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
                 if (StompCommand.CONNECT.equals(accessor.getCommand())) {
                     String token = extractToken(accessor);
-                    if (token != null && tokenProvider.validateToken(token)) {
-                        String username = tokenProvider.getUsernameFromJWT(token);
-                        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    System.out.println(token);
+                    if (StringUtils.hasText(token)) {
+                        try {
+                            if (tokenProvider.validateToken(token)) {
+                                String username = tokenProvider.getUsernameFromJWT(token);
+                                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                        UsernamePasswordAuthenticationToken authentication =
-                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                                UsernamePasswordAuthenticationToken auth =
+                                        new UsernamePasswordAuthenticationToken(
+                                                userDetails, null, userDetails.getAuthorities());
 
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                        accessor.setUser(authentication);
+                                SecurityContextHolder.getContext().setAuthentication(auth);
+                                accessor.setUser(auth);
+                                logger.debug("WebSocket CONNECT authenticated for user {}", username);
+                            } else {
+                                logger.warn("WebSocket CONNECT: JWT did not validate");
+                            }
+                        } catch (Exception ex) {
+                            // IMPORTANT: do not rethrow, or SockJS session will be closed with 1002
+                            logger.warn("WebSocket CONNECT token validation failed, proceeding as anonymous user: {}",
+                                    ex.getMessage());
+                        }
+                    } else {
+                        logger.debug("WebSocket CONNECT without Authorization header, anonymous session");
                     }
                 }
                 return message;
@@ -77,10 +95,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private String extractToken(StompHeaderAccessor accessor) {
         String bearerToken = accessor.getFirstNativeHeader("Authorization");
-
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            logger.debug("Token Found....");
             return bearerToken.substring(7);
         }
+        logger.debug("No Token Found....");
         return null;
     }
 }

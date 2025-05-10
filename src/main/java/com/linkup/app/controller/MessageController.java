@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,83 +31,71 @@ public class MessageController {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
-
     @Autowired
     private MessageService messageService;
-
     @Autowired
     private UserRepository userRepository;
 
-
     @MessageMapping("/chat")
-    public void processMessage(@Payload MessageRequest messageRequest) {
-        // Get current authenticated user
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        if (auth == null || !auth.isAuthenticated()) {
-            logger.error("Unauthenticated or invalid user tried to send a message.");
-            return; // Stop processing if no valid authentication
+    public void processMessage(
+            @Payload MessageRequest messageRequest,
+            Principal principal           // <- injected from your interceptor
+    ) {
+        if (principal == null) {
+            logger.error("Unauthenticated WebSocket user tried to send a message.");
+            return;
         }
-
-        String email = auth.getName();
-
+        String email = principal.getName();
         Optional<User> senderOpt = userRepository.findByEmail(email);
-
-        if (senderOpt.isPresent()) {
-            User sender = senderOpt.get();
-            Long senderId = sender.getUserId();
-
-            // Save the message
-            Message savedMessage = messageService.saveMessage(
-                    senderId,
-                    messageRequest.getReceiverId(),
-                    messageRequest.getContent()
-            );
-
-            // Create response DTO
-            MessageResponse response = new MessageResponse(
-                    savedMessage.getMessageId(),
-                    savedMessage.getSender().getUserId(),
-                    savedMessage.getSender().getUserName(),
-                    savedMessage.getReceiver().getUserId(),
-                    savedMessage.getReceiver().getUserName(),
-                    savedMessage.getContent(),
-                    savedMessage.getTimestamp()
-            );
-
-            // Send message to recipient
-            messagingTemplate.convertAndSendToUser(
-                    savedMessage.getReceiver().getUserId().toString(),
-                    "/queue/messages",
-                    response
-            );
-
-            // Send notification to recipient
-            messagingTemplate.convertAndSendToUser(
-                    savedMessage.getReceiver().getUserId().toString(),
-                    "/queue/notification",
-                    new ChatNotification(
-                            senderId,
-                            sender.getUserName(),
-                            "New message from " + sender.getUserName()
-                    )
-            );
-
-            logger.info("Message sent from {} to {}", senderId, messageRequest.getReceiverId());
-        } else {
-            logger.error("Sender not found for email: {}", email);
+        if (senderOpt.isEmpty()) {
+            logger.error("Sender not found: {}", email);
+            return;
         }
+
+        User sender = senderOpt.get();
+        Message saved = messageService.saveMessage(
+                sender.getUserId(),
+                messageRequest.getReceiverId(),
+                messageRequest.getContent()
+        );
+
+        MessageResponse resp = new MessageResponse(
+                saved.getMessageId(),
+                saved.getSender().getUserId(),
+                saved.getSender().getUserName(),
+                saved.getReceiver().getUserId(),
+                saved.getReceiver().getUserName(),
+                saved.getContent(),
+                saved.getTimestamp()
+        );
+
+        // send to recipient’s queues
+        String dest = saved.getReceiver().getUserId().toString();
+        messagingTemplate.convertAndSendToUser(dest, "/queue/messages", resp);
+        messagingTemplate.convertAndSendToUser(
+                dest,
+                "/queue/notification",
+                new ChatNotification(
+                        sender.getUserId(),
+                        sender.getUserName(),
+                        "New message from " + sender.getUserName()
+                )
+        );
+        logger.info("Message sent from {} to {}", sender.getUserId(), messageRequest.getReceiverId());
     }
 
-
     @MessageMapping("/message/delivered")
-    public void markAsDelivered(@Payload Long messageId) {
-        messageService.markAsDelivered(messageId);
+    public void markAsDelivered(@Payload Long messageId, Principal principal) {
+        if (principal != null) {
+            messageService.markAsDelivered(messageId);
+        }
     }
 
     @MessageMapping("/message/read")
-    public void markAsRead(@Payload Long messageId) {
-        messageService.markAsRead(messageId);
+    public void markAsRead(@Payload Long messageId, Principal principal) {
+        if (principal != null) {
+            messageService.markAsRead(messageId);
+        }
     }
 
     // REST endpoints for message history
