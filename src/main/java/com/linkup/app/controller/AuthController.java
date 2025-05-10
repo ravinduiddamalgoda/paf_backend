@@ -13,6 +13,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
@@ -105,9 +106,17 @@ public class AuthController {
             userInfo.put("email", authentication.getName());
             userInfo.put("authenticated", true);
 
-            // If using OAuth2User, you can extract additional info
-             OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
-             userInfo.put("name", oauth2User.getAttribute("name"));
+            // Check what type of principal we have and handle accordingly
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof OAuth2User oauth2User) {
+                // OAuth2 login
+                userInfo.put("name", oauth2User.getAttribute("name"));
+                userInfo.put("authType", "oauth2");
+            } else if (principal instanceof UserDetails userDetails) {
+                // JWT login
+                userInfo.put("name", userDetails.getUsername());
+                userInfo.put("authType", "jwt");
+            }
 
             return ResponseEntity.ok(userInfo);
         }

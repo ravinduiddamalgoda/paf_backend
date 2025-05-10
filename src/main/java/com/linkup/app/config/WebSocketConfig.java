@@ -34,12 +34,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("*")
-                .withSockJS();
+                .setAllowedOriginPatterns("*")  // ✅ Use this instead
+                .withSockJS();                  // ✅ SockJS needs explicit origin patterns
     }
+
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
