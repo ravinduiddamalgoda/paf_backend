@@ -17,7 +17,7 @@ public class LearningPathContent {
     private Long id;
 
     private Boolean isCompleted;
-    private LocalDateTime date;
+    private LocalDateTime TargetDate;
 
     // Fields to better describe the content
     private String contentTitle;

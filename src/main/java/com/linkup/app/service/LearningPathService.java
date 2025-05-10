@@ -60,7 +60,7 @@ public class LearningPathService {
             for (LearningPathContentDTO contentDto : contents) {
                 LearningPathContent content = new LearningPathContent();
                 content.setIsCompleted(false); // Default value
-                content.setDate(LocalDateTime.now());
+                content.setTargetDate(LocalDateTime.now());
                 content.setContentTitle(contentDto.getContentTitle());
                 content.setContentDescription(contentDto.getContentDescription());
                 content.setContentUrl(contentDto.getContentUrl());
@@ -103,7 +103,7 @@ public class LearningPathService {
 
         LearningPathContent content = new LearningPathContent();
         content.setIsCompleted(false);
-        content.setDate(LocalDateTime.now());
+        content.setTargetDate(LocalDateTime.now());
         content.setContentTitle(contentDto.getContentTitle());
         content.setContentDescription(contentDto.getContentDescription());
         content.setContentUrl(contentDto.getContentUrl());
@@ -126,7 +126,7 @@ public class LearningPathService {
         }
 
         content.setIsCompleted(isCompleted);
-        content.setDate(LocalDateTime.now()); // Update the timestamp when status changes
+        content.setTargetDate(LocalDateTime.now()); // Update the timestamp when status changes
 
         return convertContentToDto(learningPathContentRepository.save(content));
     }
@@ -174,7 +174,7 @@ public class LearningPathService {
         LearningPathContentDTO dto = new LearningPathContentDTO();
         dto.setId(content.getId());
         dto.setIsCompleted(content.getIsCompleted());
-        dto.setDate(content.getDate());
+        dto.setDate(content.getTargetDate());
         dto.setLearningPathId(content.getLearningPath().getId());
         dto.setContentTitle(content.getContentTitle());
         dto.setContentDescription(content.getContentDescription());
@@ -230,7 +230,7 @@ public class LearningPathService {
         // Update all contents
         contentsToUpdate.forEach(content -> {
             content.setIsCompleted(isCompleted);
-            content.setDate(LocalDateTime.now());
+            content.setTargetDate(LocalDateTime.now());
         });
 
         List<LearningPathContent> updatedContents = learningPathContentRepository.saveAll(contentsToUpdate);
