@@ -40,7 +40,7 @@ public class LearningPathController {
             User user = getUserByEmail(email);
 
             List<LearningPathDTO> learningPaths = learningPathService.getLearningPathsByUserId(user.getUserId());
-            return ResponseEntity.ok(learningPaths);
+            return ResponseEntity.status(HttpStatus.OK).body(learningPaths);
         } catch (Exception e) {
             logger.severe("Error retrieving learning paths: " + e.getMessage());
             e.printStackTrace();
