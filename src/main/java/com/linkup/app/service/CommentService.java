@@ -44,12 +44,6 @@ public class CommentService {
         comment.setContent(content);
         comment.setCreatedAt(LocalDateTime.now());
 
-        if (parentCommentId != null) {
-            Comment parentComment = commentRepository.findById(parentCommentId)
-                    .orElseThrow(() -> new RuntimeException("Parent comment not found"));
-            comment.setParentComment(parentComment);
-        }
-
         return commentRepository.save(comment);
     }
 
@@ -71,7 +65,6 @@ public class CommentService {
                 comment.getUser().getUserId(),
                 comment.getUser().getUserName(),
                 comment.getPost().getPostId(),
-                comment.getParentComment() != null ? comment.getParentComment().getCommentId() : null,
                 new ArrayList<>()
         );
 

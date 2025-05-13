@@ -16,6 +16,5 @@ public class CommentResponse {
     private Long userId;
     private String userName;
     private Long postId;
-    private Long parentCommentId;
     private List<CommentResponse> replies;
 }

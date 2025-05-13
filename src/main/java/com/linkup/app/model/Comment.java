@@ -35,12 +35,6 @@ public class Comment {
     @JsonBackReference
     private Post post;
 
-
-    // Self-referencing relationship for comment replies
-    @ManyToOne
-    @JoinColumn(name = "parentCommentId")
-    private Comment parentComment;
-
     @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL)
     private Set<Comment> replies = new HashSet<>();
 

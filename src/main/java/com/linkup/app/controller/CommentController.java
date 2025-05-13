@@ -55,7 +55,6 @@ public class CommentController {
                 comment.getUser().getUserId(),
                 comment.getUser().getUserName(),
                 comment.getPost().getPostId(),
-                comment.getParentComment() != null ? comment.getParentComment().getCommentId() : null,
                 List.of() // Empty replies for now, because it's a new comment
         );
 
@@ -125,7 +124,6 @@ public class CommentController {
                     updatedComment.getUser().getUserId(),
                     updatedComment.getUser().getUserName(),
                     updatedComment.getPost().getPostId(),
-                    updatedComment.getParentComment() != null ? updatedComment.getParentComment().getCommentId() : null,
                     List.of() // No replies here
             );
 
