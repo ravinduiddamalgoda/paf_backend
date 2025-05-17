@@ -31,7 +31,7 @@ public class CommentService {
     private PostRepository postRepository;
 
     @Transactional
-    public Comment addComment(Long userId, Long postId, String content, Long parentCommentId) {
+    public Comment addComment(Long userId, Long postId, String content) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -47,13 +47,12 @@ public class CommentService {
         return commentRepository.save(comment);
     }
 
-    public List<CommentResponse> getPostComments(Long postId) {
-        // Get all top-level comments
-        List<Comment> topLevelComments = commentRepository.findByPostPostIdAndParentCommentIsNullOrderByCreatedAtDesc(postId);
 
-        // Convert to response DTOs with replies
-        return topLevelComments.stream()
-                .map(this::convertToCommentResponseWithReplies)
+    public List<CommentResponse> getPostComments(Long postId) {
+        List<Comment> comments = commentRepository.findByPostPostIdOrderByCreatedAtDesc(postId);
+
+        return comments.stream()
+                .map(this::convertToCommentResponse)
                 .collect(Collectors.toList());
     }
 
@@ -68,15 +67,20 @@ public class CommentService {
                 new ArrayList<>()
         );
 
-        // Get replies and convert them recursively
-        List<Comment> replies = commentRepository.findByParentCommentCommentIdOrderByCreatedAtAsc(comment.getCommentId());
-        response.setReplies(
-                replies.stream()
-                        .map(this::convertToCommentResponseWithReplies)
-                        .collect(Collectors.toList())
-        );
+
 
         return response;
+    }
+    private CommentResponse convertToCommentResponse(Comment comment) {
+        return new CommentResponse(
+                comment.getCommentId(),
+                comment.getContent(),
+                comment.getCreatedAt(),
+                comment.getUser().getUserId(),
+                comment.getUser().getUserName(),
+                comment.getPost().getPostId(),
+                List.of() // Empty list since we no longer have replies
+        );
     }
 
     public Optional<Comment> getCommentById(Long commentId) {

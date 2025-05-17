@@ -1,8 +1,12 @@
 package com.linkup.app.service;
 
+import com.linkup.app.dto.CommentResponse;
+import com.linkup.app.dto.PostResponse;
+import com.linkup.app.model.Comment;
 import com.linkup.app.model.Content;
 import com.linkup.app.model.Post;
 import com.linkup.app.model.User;
+import com.linkup.app.repository.ContentRepository;
 import com.linkup.app.repository.PostRepository;
 import com.linkup.app.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +31,10 @@ public class PostService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired
+    private ContentRepository contentRepository; // Add this if you don't have it already
+
+
     public Post createPost(Long userId, String description, List<MultipartFile> mediaFiles) throws IOException {
         // Validate user existence
         User user = userRepository.findById(userId)
@@ -41,9 +49,9 @@ public class PostService {
         post.setUser(user);
         post.setPostType("skill_sharing");
         post.setDescription(description);
-        post.setContents(new HashSet<>()); // Important to match your entity Set<Content>
+        post.setContents(new HashSet<>()); // Initialize empty set
 
-        // Save Post early to get ID (if needed for storage naming)
+        // Save Post early to get ID
         post = postRepository.save(post);
 
         // Process media files if any
@@ -51,6 +59,7 @@ public class PostService {
             for (MultipartFile file : mediaFiles) {
                 String fileName = fileStorageService.storeFile(file);
 
+                // Create and save each Content separately
                 Content content = new Content();
                 content.setPath(fileName);
                 content.setContentType(file.getContentType());
@@ -68,15 +77,16 @@ public class PostService {
                     content.setFileType("unknown");
                 }
 
-                post.getContents().add(content);
+                // Save each content object individually
+                contentRepository.save(content);
             }
         }
 
-        // Save updated post with contents attached
-        post = postRepository.save(post);
-
-        return post;
+        // Re-fetch the post to ensure we have all associations loaded
+        return postRepository.findById(post.getPostId())
+                .orElseThrow(() -> new RuntimeException("Failed to retrieve post after saving"));
     }
+
 
 
 
@@ -84,8 +94,44 @@ public class PostService {
         return postRepository.findByUserUserIdOrderByPostIdDesc(userId);
     }
 
-    public List<Post> getAllPosts() {
-        return postRepository.findAllByOrderByPostIdDesc();
+    public List<PostResponse> getAllPosts() {
+        List<Post> posts = postRepository.findAllByOrderByPostIdDesc();
+        List<PostResponse> postResponses = new ArrayList<>();
+        for (Post post : posts) {
+            PostResponse postResponse = new PostResponse();
+
+            postResponse.setPostId(post.getPostId());
+            postResponse.setDescription(post.getDescription());
+            postResponse.setPostType(post.getPostType());
+            postResponse.setCreatedAt(post.getCreatedAt());
+
+            // User Info
+            if (post.getUser() != null) {
+                postResponse.setUserId(post.getUser().getUserId());
+                postResponse.setUserName(post.getUser().getUserName());
+            }
+            // Contents
+            postResponse.setContents(post.getContents());
+            // Comments & Likes Count
+            postResponse.setCommentsCount(post.getComments().size());
+            List<CommentResponse> commentResponses = new ArrayList<>();
+            for (Comment comment : post.getComments()) {
+                CommentResponse commentResponse = new CommentResponse();
+                commentResponse.setCommentId(comment.getCommentId());
+                commentResponse.setCreatedAt(comment.getCreatedAt());
+                commentResponse.setPostId(comment.getPost().getPostId());
+                commentResponse.setContent(comment.getContent());
+                //commentResponse.setParentCommentId(comment.getParentComment().getCommentId());
+                commentResponse.setUserId(comment.getUser().getUserId());
+                commentResponse.setUserName(comment.getUser().getUserName());
+
+                commentResponses.add(commentResponse);
+            }
+            postResponse.setComments(commentResponses);
+            postResponse.setLikesCount(post.getLikes().size());
+            postResponses.add(postResponse);
+        }
+        return postResponses;
     }
 
     public Optional<Post> getPostById(Long postId) {

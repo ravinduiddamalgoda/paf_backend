@@ -35,8 +35,6 @@ public class Comment {
     @JsonBackReference
     private Post post;
 
-    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL)
-    private Set<Comment> replies = new HashSet<>();
 
     @Override
     public boolean equals(Object o) {

@@ -10,5 +10,4 @@ import lombok.NoArgsConstructor;
 public class CommentRequest {
     private Long postId;
     private String content;
-    private Long parentCommentId; // Optional, null for top-level comments
 }

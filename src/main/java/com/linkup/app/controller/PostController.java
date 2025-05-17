@@ -1,5 +1,6 @@
 package com.linkup.app.controller;
 
+import com.linkup.app.dto.PostResponse;
 import com.linkup.app.dto.UpdatePostRequest;
 import com.linkup.app.model.Post;
 import com.linkup.app.model.User;
@@ -64,6 +65,7 @@ public class PostController {
 
             logger.info("Found user: " + user.getUserId() + " - " + user.getUserName());
 
+
             // Validate media file count
             if (mediaFiles != null && mediaFiles.size() > 3) {
                 logger.warning("Too many files: " + mediaFiles.size());
@@ -73,6 +75,7 @@ public class PostController {
             if (mediaFiles == null ) {
                 return ResponseEntity.badRequest().body("Post must need to Have atleast One content.");
             }
+            logger.info("Media File Size " + mediaFiles.size());
 
             // Create post with better error catching
             Post post = postService.createPost(user.getUserId(), description, mediaFiles);
@@ -94,9 +97,9 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Post>> getAllPosts() {
+    public ResponseEntity<List<PostResponse>> getAllPosts() {
         try {
-            List<Post> posts = postService.getAllPosts();
+            List<PostResponse> posts = postService.getAllPosts();
             logger.info("Retrieved " + posts.size() + " posts");
             return ResponseEntity.ok(posts);
         } catch (Exception e) {

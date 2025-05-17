@@ -43,10 +43,9 @@ public class CommentController {
         Comment comment = commentService.addComment(
                 user.getUserId(),
                 commentRequest.getPostId(),
-                commentRequest.getContent(),
-                commentRequest.getParentCommentId()
+                commentRequest.getContent()
+                // Remove parent comment ID parameter
         );
-
 
         CommentResponse response = new CommentResponse(
                 comment.getCommentId(),
@@ -55,7 +54,7 @@ public class CommentController {
                 comment.getUser().getUserId(),
                 comment.getUser().getUserName(),
                 comment.getPost().getPostId(),
-                List.of() // Empty replies for now, because it's a new comment
+                List.of() // Empty replies list
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
